@@ -1,0 +1,36 @@
+base_url = "https://marcos.unsafe.rs"
+
+theme = "terminimal"
+title = "moao's blog"
+logo_text = "moao's blog"
+
+compile_sass = true
+build_search_index = false
+
+taxonomies = [
+    { name = "tags" },
+]
+
+[markdown]
+highlight_code = true
+highlight_theme = "gruvbox-dark"
+
+[extra]
+enable_post_view_navigation = true
+
+copyright_html = "io::Result::Ok(0)"
+
+# menu is enabled by adding menu_items (optional)
+menu_items = [
+    # each of these is optional, name and url are required
+    # $BASE_URL is going to be substituted by base_url from configuration
+    { name = "blog", url = "$BASE_URL" },
+
+    # tags should only be enabled if you have "tags" taxonomy
+    # see documentation below for more details
+    { name = "tags", url = "$BASE_URL/tags" },
+    { name = "about", url = "$BASE_URL/about" },
+
+    # set newtab to true to make the link open in new tab
+    { name = "github", url = "https://github.com/marcospb19", newtab = true },
+]
