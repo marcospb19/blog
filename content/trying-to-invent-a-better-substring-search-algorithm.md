@@ -53,7 +53,7 @@ Can't we speed this up in a simpler way?
 
 # The naive implementation
 
-Instead of properly explaining the problem, I'll just show you a solution.
+Instead of explaining the substring search algorithm, I'll show you a solution:
 
 ```Rust
 // Time complexity: O(H * N)
@@ -74,27 +74,38 @@ For each [window] (with the needle size) in the haystack, check if it matches th
 
 I want this, but vroom vroom (faster).
 
+<details>
+<summary>
+What does <code>haystack.windows(...)</code> do? <i>(→ click me ←)</i>
+</summary>
+
+> The `slice::windows` method returns an iterator that <a href="https://www.google.com/search?q=sliding+window+technique">slides a window</a> with the provided size through the whole slice.
+>
+> ||0|1|2|3|4|5|6|7|8|9|
+> |:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+> |1st|0|1|2|3|4|5|||||
+> |2nd||1|2|3|4|5|6||||
+> |3rd|||2|3|4|5|6|7|||
+> |4th||||3|4|5|6|7|8||
+> |5th|||||4|5|6|7|8|9|
+>
+> Above, each line represent a window in `(0..=9)` with size `6`.
+
+</details>
+
 # The thought process
 
 What I'm looking for:
 
-- For each window, tell if it can be skipped.
-- Maximize the amount of skips, so my algorithm runs faster.
-- Linear time complexity, and constant space complexity.
+1. For each window, tell if it can be skipped.
+2. Maximize the amount of skips, so my algorithm runs faster.
+3. Linear time complexity, and constant space complexity.
 
-Here's what [sliding a window] looks like:
+I'll start my thought process based on these.
 
-[sliding a window]: https://www.google.com/search?q=sliding+window+technique
+The main question to answer is: _"How can I tell if a window can be skipped?"_
 
-|0|1|2|3|4|5|6|7|8|9|
-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-|0|1|2|3|4|5|||||
-||1|2|3|4|5|6||||
-|||2|3|4|5|6|7|||
-||||3|4|5|6|7|8||
-|||||4|5|6|7|8|9|
-
-My initial chain of thought:
+To develop an idea, I started asking myself simpler questions:
 
 - What insight can I gather about a **single window**?
     - IDK, start somewhere _cheap_.
@@ -109,7 +120,7 @@ _But_ I'm constrained by **linear time complexity**, with this in mind, how do I
 
 I know how to do this in `O(N²)`, but not in `O(N)`.
 
-Ok, gotta try something else (we'll come back to hashing later).
+Ok, gotta try something else (but I'll come back to hashing later).
 
 - Brain, give me another cheap arithmetic operation.
     - XOR.
@@ -118,7 +129,7 @@ Ok, gotta try something else (we'll come back to hashing later).
 
 Yes! Similar to the hash idea, we can compute the sum (of all elements) for both slices, if `sum(needle) != sum(haystack)`, equality is impossible and the check can be skipped.
 
-Also, I know how to do this in `O(N)`:
+And this time, I know how to do this in `O(N)`, take these windows as an example:
 
 ||0|1|2|3|4|5|6|7|8|9|
 |:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -128,17 +139,17 @@ Also, I know how to do this in `O(N)`:
 |4th||||3|4|5|6|7|8||
 |5th|||||4|5|6|7|8|9|
 
-Calculate the first sum naively:
+To start, calculate the sum of the first window naively:
 
-- First sum is `15`.
+1. First sum is `15`.
 
 For the rest, reuse the previous sum, subtract the removed element and add the new one:
 
-- `Second = First + 6 - 0 = 21`.
-- `Third = Second + 7 - 1 = 27`.
-- `Fourth = Third + 8 - 2 = 33`.
-- `Fifth = Fourth + 9 - 3 = 39`.
-- And so on.
+2. `Second = First + 6 - 0 = 21`.
+3. `Third = Second + 7 - 1 = 27`.
+4. `Fourth = Third + 8 - 2 = 33`.
+5. `Fifth = Fourth + 9 - 3 = 39`.
+6. And so on...
 
 That's `O(N)` for all windows, and addition is, of course, fast as hell.
 
@@ -171,10 +182,10 @@ fn sum_search(haystack: &str, needle: &str) -> bool {
     };
 
     let needle_sum = sum_slice(needle);
-    let mut haystack_sum = sum_slice(first_window);
+    let mut window_sum = sum_slice(first_window);
 
     // Short-circuit the expensive check to skip it
-    if needle_sum == haystack_sum && first_window == needle {
+    if needle_sum == window_sum && first_window == needle {
         return true;
     }
 
@@ -182,11 +193,11 @@ fn sum_search(haystack: &str, needle: &str) -> bool {
     for (removed_element_index, window) in windows.enumerate() {
         // Unwrap Safety:
         //   We know that `needle.len() > 0`, every window is non-empty.
-        haystack_sum += *window.last().unwrap() as u64;
-        haystack_sum -= haystack[removed_element_index] as u64;
+        window_sum += *window.last().unwrap() as u64;
+        window_sum -= haystack[removed_element_index] as u64;
 
         // If the sum doesn't match, skip the check
-        if needle_sum != haystack_sum {
+        if needle_sum != window_sum {
             continue;
         }
         // Check equality (expensive check)
@@ -326,18 +337,18 @@ If I managed to spark your interest on this subject, you should read more about 
 
 So, here are some suggested points for you to think about:
 
-- Check [the classification of (substring) search algorithms](https://en.wikipedia.org/wiki/String-searching_algorithm#Classification_of_search_algorithms).
-- Why is `std`'s [`<&str>::contains`](https://doc.rust-lang.org/nightly/std/primitive.str.html#method.contains) [implementation](https://github.com/rust-lang/rust/blob/4af886f8ab94543caad689ee6bf6a93fa8bd4a98/library/core/src/str/pattern.rs#L1253-L1325) so fast?
-- What makes for a good *rolling hash function*?
+1. Check [the classification of (substring) search algorithms](https://en.wikipedia.org/wiki/String-searching_algorithm#Classification_of_search_algorithms).
+2. Why is `std`'s [`<&str>::contains`](https://doc.rust-lang.org/nightly/std/primitive.str.html#method.contains) [implementation](https://github.com/rust-lang/rust/blob/4af886f8ab94543caad689ee6bf6a93fa8bd4a98/library/core/src/str/pattern.rs#L1253-L1325) so fast?
+3. What makes for a good *rolling hash function*?
     - Check [the one](http://www-igm.univ-mlv.fr/~lecroq/string/node5.html) used in `memchr` and `aho-corasick` crates.
-- For what inputs each substring search algorithm shines the most?
+4. For what inputs each substring search algorithm shines the most?
     - Is it possible to create an adaptative algorithm that collects insights from the input on-the-fly and changes strategy based on it? Is there any gain on falling back to another strategy mid-way, or can you always take the correct decision upfront?
 
 # Extras
 
 ## Can the algorithm overflow?
 
-It would require a needle of `72_057 TB`.
+It would require a needle of `72_057 TB`, in that case, the search algorithm would produce false-negatives.
 
 ## XOR variation
 
@@ -365,15 +376,15 @@ fn xor_search(haystack: &str, needle: &str) -> bool {
         slice.iter().copied().map(u64::from).fold(0, |a, b| a ^ b)
     };
     let needle_xor = xor_slice(needle);
-    let mut haystack_xor = xor_slice(first_window);
+    let mut window_xor = xor_slice(first_window);
 
     ...
 
     for (removed_element_index, window) in windows.enumerate() {
         // Unwrap Safety:
         //   We know that `needle.len() > 0`, every window is non-empty.
-        haystack_xor ^= *window.last().unwrap() as u64;
-        haystack_xor ^= haystack[removed_element_index] as u64;
+        window_xor ^= *window.last().unwrap() as u64;
+        window_xor ^= haystack[removed_element_index] as u64;
         ...
 ```
 
@@ -386,8 +397,6 @@ boyer_moore  =  1.01 ms
 ```
 
 It works, it's still faster than the naive, but its slower than `sum_search` because XOR of `u8`s is limited to `u8::MAX` and the chance of collision is higher, in contrast to the `u64` used in `sum_search`.
-
-The performance of the `sum` solution gets increasingly better for bigger needles, but the `xor`'s should get diminishing return rather quickly (please, do not blindly trust time complexity constraints).
 
 ## Inputs that trigger the worst-case performance
 
@@ -458,8 +467,11 @@ fn sum_search(haystack: &str, needle: &str) -> bool {
 ```
 
 <details>
-<summary>Answer (click me) ←</summary>
-<code>haystack.len() >= 2</code>
+<summary>
+Answer. <i>(→ click me ←)</i>
+</summary>
+
+> `haystack.len() >= 2`
 </details>
 
 ## Code for the `needle` crate
@@ -471,6 +483,14 @@ fn boyer_moore(haystack: &str, needle: &str) -> bool {
         .is_some()
 }
 ```
+
+<!--
+Talk to them before adding this
+
+## Acknowledgements
+
+Thanks to my friends, [`shyba`](https://github.com/shyba), [`matheus-consoli`](https://github.com/matheus-consoli), [`vrmiguel`](https://github.com/vrmiguel), and [`dlight`](https://github.com/dlight) for the reviews.
+-->
 
 ## Comment section
 
