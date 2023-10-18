@@ -87,6 +87,12 @@
     }
   }
 
+  ol {
+    li::marker {
+      color: var(--accent);
+    }
+  }
+
   ul {
     list-style: none;
 

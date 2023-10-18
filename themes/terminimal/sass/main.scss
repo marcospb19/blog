@@ -190,7 +190,7 @@ table {
   table-layout: fixed;
   border-collapse: collapse;
   width: 100%;
-  margin: 40px 0;
+  margin: 30px 0;
 }
 
 table, th, td {
@@ -245,4 +245,13 @@ hr {
 
 .hidden {
   display: none;
+}
+
+details {
+  summary {
+    padding: 10px;
+    padding-left: 15px;
+    border: dashed rgba(100, 255, 180, 0.03);
+    background: rgba(100, 255, 180, 0.06);
+  }
 }
