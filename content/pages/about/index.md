@@ -27,6 +27,8 @@ I'm João Marcos (he/him) and some friends call me Moão. I'm 23 and at 17 I wro
 
 Since that, I spent waaay too many nights looking at a text editor.
 
+Here is a small bit of it: [github.com/marcospb19](https://github.com/marcospb19).
+
 Last year I became worried about my "programming obsession" and "missing out on life", since that, I've been trying to slow down, I look forward to touch more grass in the future.
 
 Thanks, grass.
@@ -37,6 +39,17 @@ Thanks, grass.
     alt="An picture of me from behind, I'm walking in a dark city night with a yellow jacket."
   )
 }}
+
+I also got 8 rescued cats, huge shoutout to them in the order they spawned:
+
+- Pingo
+- Gota
+- Chuvisco
+- Steve
+- Maria Gotinha
+- Olívia
+- Sofia Catarina
+- Floquinho
 
 <br>
 
