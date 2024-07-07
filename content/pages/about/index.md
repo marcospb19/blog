@@ -1,39 +1,35 @@
 +++
-title = "About me and my blog"
+title = "About the blog and the me"
 path = "about"
 
 [extra]
 hide_page_meta = true
 +++
 
-I'm João Marcos (he/him), but some of my dear friends call me Moão.
+# The blog
 
-I don't take myself too seriously, and you shouldn't either!
+I have a list of post ideas to make, here is a peek at some:
 
-> Disclaimer: This blog is AI-free, I'm not against AI in general, but I prefer reading texts that are made by human beings, for human beings.
+- Ergonomically testing filesystem tree mutation.
+- An intuition guide for Quake-like air strafing implementations.
+- An understandable example for the fifth derivative.
+- How to create a basic RegEx engine.
+- Algorithm complexity isn't about "speed".
+- FFFFF: Fashioning Fuzzy Finders For Fun.
 
-On trying to be self-aware: I'm a "language person", and I know that's usually referred to as a bad thing. Not sure if I'm willing to force myself otherwise, if I should, or if it matters.
+Just ideas, I have no clear plans for what or when, maybe one post per year? IDK.
 
-In my understanding, being a "language person" speaks about how much you're passionate about such subject.
+> Disclaimer: This blog is completely AI-free, that includes the code written; As a human being, I admit having a strong bias towards text created by other humans (intraspecies communication).
 
-And about being too passionate, my job activity is the same as my main hobby, I'd say that's mostly good, but also hard to balance out, sometimes I get worried that I'm too obcessed about programming (and Rust).
+# The me
 
-I feel like I spend so much time on it, as if I'm _missing out on life_, whatever that means.
+I'm João Marcos (he/him) and some friends call me Moão. I'm 23 and at 17 I wrote my first "Hello World" as I joined college.
 
-Does my life revolve around a single activity?
+Since that, I spent waaay too many nights looking at a text editor.
 
-{{
-  image(
-    src="/images/an-innacurate-representation-of-me.jpg",
-    alt="An picture of me from behind, I'm walking in a dark city night with a yellow jacket."
-  )
-}}
+Last year I became worried about my "programming obsession" and "missing out on life", since that, I've been trying to slow down, I look forward to touch more grass in the future.
 
-<br>
-
----
-
-Anyways, I've been consciously making an effort lately to balance things out, I've been feeling less obcessed, and it's been great so far!
+Thanks, grass.
 
 {{
   image(
