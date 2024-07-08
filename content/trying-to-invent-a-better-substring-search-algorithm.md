@@ -210,7 +210,7 @@ fn sum_search(haystack: &str, needle: &str) -> bool {
 }
 ```
 
-Time to compare it to the naive solution and the fastest [Boyer–Moore] crate, [`needle`]:
+Time to compare it to the naive solution and (one of) the fastest [Boyer–Moore] crate, [`needle`]:
 
 [`needle`]: https://crates.io/crates/needle
 
@@ -221,6 +221,8 @@ boyer_moore  =  1.52 ms
 sum_search   =  2.43 ms # mine
 naive_search = 13.87 ms
 ```
+
+> Mistake: When writing I didn't consider [`memchr::memmem`](https://docs.rs/memchr/latest/memchr/memmem/index.html), which may contain a faster [Boyer–Moore] implementation than [`needle`]. Sorry **Burnt Sushi**!
 
 [Shakespeare book]: https://ocw.mit.edu/ans7870/6/6.006/s08/lecturenotes/files/t8.shakespeare.txt
 
