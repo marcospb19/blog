@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://marcos.unsafe.rs/</loc>
+    </url>
+    <url>
+        <loc>https://marcos.unsafe.rs/about/</loc>
+    </url>
+    <url>
+        <loc>https://marcos.unsafe.rs/tags/</loc>
+    </url>
+    <url>
+        <loc>https://marcos.unsafe.rs/tags/algorithms/</loc>
+    </url>
+    <url>
+        <loc>https://marcos.unsafe.rs/tags/rust/</loc>
+    </url>
+    <url>
+        <loc>https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/</loc>
+        <lastmod>2023-10-17</lastmod>
+    </url>
+</urlset>
