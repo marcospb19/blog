@@ -2,14 +2,11 @@ base_url = "https://marcos.unsafe.rs"
 
 theme = "terminimal"
 title = "moao's blog"
-logo_text = "moao's blog"
 
 compile_sass = true
 build_search_index = false
 
-taxonomies = [
-    { name = "tags" },
-]
+taxonomies = [{ name = "tags" }]
 
 [markdown]
 highlight_code = true
