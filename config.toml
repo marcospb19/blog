@@ -14,8 +14,7 @@ highlight_theme = "gruvbox-dark"
 
 [extra]
 enable_post_view_navigation = true
-
-copyright_html = "io::Result::Ok(0)"
+copyright_html = "Ok(())"
 
 # menu is enabled by adding menu_items (optional)
 menu_items = [
