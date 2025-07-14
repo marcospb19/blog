@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>moao&#x27;s blog</title>
+    
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="robots" content="noodp"/>
+
+    <link rel="stylesheet" href="https://marcos.unsafe.rs/style.css">
+    <link rel="stylesheet" href="https://marcos.unsafe.rs/color/green.css">
+
+    <link rel="stylesheet" href="https://marcos.unsafe.rs/font-hack-subset.css">
+
+    </head>
+
+<body class="">
+<div class="container">
+    
+    <header class="header">
+        <div class="header__inner">
+            <div class="header__logo">
+                    
+                <a href="https://marcos.unsafe.rs" style="text-decoration: none;">
+                    <div class="logo">
+                      
+                            moao
+                        
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        
+        
+                <nav class="menu">
+            <ul class="menu__inner">
+                <li class="active"><a href="https://marcos.unsafe.rs">blog</a></li>
+            
+                <li><a href="https://marcos.unsafe.rs/tags">tags</a></li>
+            
+                <li><a href="https://marcos.unsafe.rs/about">about</a></li>
+            
+                <li><a href="https://github.com/marcospb19" target="_blank" rel="noopener noreferrer">github</a></li>
+            </ul>
+        </nav>
+    
+    
+        
+    </header>
+    
+
+    <div class="content">
+        
+        <div class="posts">
+                <div class="post on-list">
+                    
+    <h1 class="post-title"><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/">Trying to invent a better substring search algorithm</a></h1>
+    <div class="post-meta-inline">
+        
+    <span class="post-date">
+            2023-10-17
+        </span>
+
+    </div>
+
+    
+        <span class="post-tags-inline">
+                :: tags:&nbsp;
+                <a class="post-tag" href="https://marcos.unsafe.rs/tags/algorithms/">#algorithms</a>&nbsp;
+                <a class="post-tag" href="https://marcos.unsafe.rs/tags/rust/">#rust</a></span>
+    
+
+                    
+        <div class="post-content">
+            <p>I failed to create something new, but I'll share my thought process, and how it almost led me to reinventing a well-known solution.</p>
+<h1 id="table-of-contents">Table of contents</h1>
+<ul>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#prelude">Prelude</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-naive-implementation">The naive implementation</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-thought-process">The thought process</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-algorithm">The algorithm</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-karp-and-the-rabin">The Karp, and the Rabin</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#closing-thoughts">Closing thoughts</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#homework">Homework</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#extras">Extras</a>:
+<ul>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#can-the-algorithm-overflow">Can the algorithm overflow?</a></li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#xor-variation">XOR variation</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#inputs-that-trigger-the-worst-case-performance">Inputs that trigger the worst-case performance</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#fun-results-for-tiny-inputs">Fun results for tiny inputs</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#tiny-puzzle">Tiny puzzle</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#code-for-the-needle-crate">Code for the <code>needle</code> crate</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#comment-section">Comment section</a>.</li>
+</ul>
+</li>
+</ul>
+<h1 id="prelude">Prelude</h1>
+<pre data-lang="Python" style="background-color:#282828;color:#fdf4c1aa;" class="language-Python "><code class="language-Python" data-lang="Python"><span>needle </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&#39;needle&#39;
+</span><span>haystack </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&#39;do I have a needle? Yes I do&#39;
+</span><span>
+</span><span style="color:#fa5c4b;">assert</span><span>(needle </span><span style="color:#fe8019;">in </span><span>haystack)
+</span></code></pre>
+
+        </div>
+        <div>
+            <!-- &#xFE0E; -- force text style - some devices render this as emoji -->
+            <a class="read-more button" href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/">
+                <span class="button__text">Read more</span>&nbsp;
+                <span class="button__icon">&#8617;&#xFE0E;</span>
+            </a>
+        </div>
+    
+
+                </div>
+            <div class="pagination">
+                <div class="pagination__buttons"></div>
+            </div>
+        </div>
+        
+    </div>
+
+    
+    <footer class="footer">
+        <div class="footer__inner">
+                <div class="copyright copyright--user">Ok(())</div>
+            </div>
+    </footer>
+    
+
+</div>
+</body>
+
+</html>

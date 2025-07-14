@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>moao&#x27;s blog</title>
+    
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="robots" content="noodp"/>
+
+    <link rel="stylesheet" href="https://marcos.unsafe.rs/style.css">
+    <link rel="stylesheet" href="https://marcos.unsafe.rs/color/green.css">
+
+    <link rel="stylesheet" href="https://marcos.unsafe.rs/font-hack-subset.css">
+
+    </head>
+
+<body class="">
+<div class="container">
+    
+    <header class="header">
+        <div class="header__inner">
+            <div class="header__logo">
+                    
+                <a href="https://marcos.unsafe.rs" style="text-decoration: none;">
+                    <div class="logo">
+                      
+                            moao
+                        
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        
+        
+                <nav class="menu">
+            <ul class="menu__inner">
+                <li class="active"><a href="https://marcos.unsafe.rs">blog</a></li>
+            
+                <li><a href="https://marcos.unsafe.rs/tags">tags</a></li>
+            
+                <li><a href="https://marcos.unsafe.rs/about">about</a></li>
+            
+                <li><a href="https://github.com/marcospb19" target="_blank" rel="noopener noreferrer">github</a></li>
+            </ul>
+        </nav>
+    
+    
+        
+    </header>
+    
+
+    <div class="content">
+        
+    <div class="post">
+        
+    <h1 class="post-title"><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/">Trying to invent a better substring search algorithm</a></h1>
+    <div class="post-meta-inline">
+        
+    <span class="post-date">
+            2023-10-17
+        </span>
+
+    </div>
+
+    
+        <span class="post-tags-inline">
+                :: tags:&nbsp;
+                <a class="post-tag" href="https://marcos.unsafe.rs/tags/algorithms/">#algorithms</a>&nbsp;
+                <a class="post-tag" href="https://marcos.unsafe.rs/tags/rust/">#rust</a></span>
+    
+
+        
+        <div class="post-content">
+            <p>I failed to create something new, but I'll share my thought process, and how it almost led me to reinventing a well-known solution.</p>
+<h1 id="table-of-contents">Table of contents</h1>
+<ul>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#prelude">Prelude</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-naive-implementation">The naive implementation</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-thought-process">The thought process</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-algorithm">The algorithm</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#the-karp-and-the-rabin">The Karp, and the Rabin</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#closing-thoughts">Closing thoughts</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#homework">Homework</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#extras">Extras</a>:
+<ul>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#can-the-algorithm-overflow">Can the algorithm overflow?</a></li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#xor-variation">XOR variation</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#inputs-that-trigger-the-worst-case-performance">Inputs that trigger the worst-case performance</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#fun-results-for-tiny-inputs">Fun results for tiny inputs</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#tiny-puzzle">Tiny puzzle</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#code-for-the-needle-crate">Code for the <code>needle</code> crate</a>.</li>
+<li><a href="https://marcos.unsafe.rs/trying-to-invent-a-better-substring-search-algorithm/#comment-section">Comment section</a>.</li>
+</ul>
+</li>
+</ul>
+<h1 id="prelude">Prelude</h1>
+<pre data-lang="Python" style="background-color:#282828;color:#fdf4c1aa;" class="language-Python "><code class="language-Python" data-lang="Python"><span>needle </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&#39;needle&#39;
+</span><span>haystack </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&#39;do I have a needle? Yes I do&#39;
+</span><span>
+</span><span style="color:#fa5c4b;">assert</span><span>(needle </span><span style="color:#fe8019;">in </span><span>haystack)
+</span></code></pre>
+<span id="continue-reading"></span>
+<p>I was once told that Python <a href="https://github.com/python/cpython/blob/75cd86599bad05cb372aed9fccc3ff884cd38b70/Objects/stringlib/fastsearch.h#L5-L8">uses</a> the <a href="https://en.wikipedia.org/wiki/Boyer-Moore_string-search_algorithm">Boyer–Moore algorithm</a> (created in 1977, optimized in 1979) to search for substrings.</p>
+<p>I briefly read about it, here's a summary: You preprocess the needle creating a lookup matrix, then, you use it to skip a lot of checks.</p>
+<p>Uh... ok, cool.</p>
+<p>-- <em>3 years passed by</em> --</p>
+<p>Can't we speed this up in a simpler way?</p>
+<h1 id="the-naive-implementation">The naive implementation</h1>
+<p>Instead of explaining the substring search algorithm, I'll show you a solution:</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span style="font-style:italic;color:#928374;">// Time complexity: O(H * N)
+</span><span style="font-style:italic;color:#928374;">// Space complexity: O(1)
+</span><span style="color:#fa5c4b;">fn </span><span style="color:#8ec07c;">naive_search</span><span>(</span><span style="color:#fdf4c1;">haystack</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>, </span><span style="color:#fdf4c1;">needle</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>) -&gt; </span><span style="color:#fa5c4b;">bool </span><span>{
+</span><span>    </span><span style="color:#fa5c4b;">let </span><span>[haystack, needle] </span><span style="color:#fe8019;">=
+</span><span>        [haystack, needle].</span><span style="color:#fabd2f;">map</span><span>(</span><span style="color:#fa5c4b;">str</span><span>::as_bytes);
+</span><span>
+</span><span>    haystack
+</span><span>        .</span><span style="color:#fabd2f;">windows</span><span>(needle.</span><span style="color:#fabd2f;">len</span><span>())
+</span><span>        .</span><span style="color:#fabd2f;">any</span><span>(|</span><span style="color:#fdf4c1;">haystack_window</span><span>| haystack_window </span><span style="color:#fe8019;">==</span><span> needle)
+</span><span>}
+</span></code></pre>
+<p>For each <a href="https://doc.rust-lang.org/nightly/std/primitive.slice.html#method.windows">window</a> (with the needle size) in the haystack, check if it matches the needle.</p>
+<p>I want this, but vroom vroom (faster).</p>
+<details>
+<summary>
+What does <code>haystack.windows(...)</code> do? <i>(→ click me ←)</i>
+</summary>
+<blockquote>
+<p>The <code>slice::windows</code> method returns an iterator that <a href="https://www.google.com/search?q=sliding+window+technique">slides a window</a> with the provided size through the whole slice.</p>
+<table><thead><tr><th align="center"></th><th align="center">0</th><th align="center">1</th><th align="center">2</th><th align="center">3</th><th align="center">4</th><th align="center">5</th><th align="center">6</th><th align="center">7</th><th align="center">8</th><th align="center">9</th></tr></thead><tbody>
+<tr><td align="center">1st</td><td align="center">0</td><td align="center">1</td><td align="center">2</td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td></tr>
+<tr><td align="center">2nd</td><td align="center"></td><td align="center">1</td><td align="center">2</td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center"></td><td align="center"></td><td align="center"></td></tr>
+<tr><td align="center">3rd</td><td align="center"></td><td align="center"></td><td align="center">2</td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center">7</td><td align="center"></td><td align="center"></td></tr>
+<tr><td align="center">4th</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center">7</td><td align="center">8</td><td align="center"></td></tr>
+<tr><td align="center">5th</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center">7</td><td align="center">8</td><td align="center">9</td></tr>
+</tbody></table>
+<p>Above, each line represent a window in <code>(0..=9)</code> with size <code>6</code>.</p>
+</blockquote>
+</details>
+<h1 id="the-thought-process">The thought process</h1>
+<p>What I'm looking for:</p>
+<ol>
+<li>For each window, tell if it can be skipped.</li>
+<li>Maximize the amount of skips, so my algorithm runs faster.</li>
+<li>Linear time complexity, and constant space complexity.</li>
+</ol>
+<p>I'll start my thought process based on these.</p>
+<p>The main question to answer is: <em>&quot;How can I tell if a window can be skipped?&quot;</em></p>
+<p>To develop an idea, I started asking myself simpler questions:</p>
+<ul>
+<li>What insight can I gather about a <strong>single window</strong>?
+<ul>
+<li>IDK, start somewhere <em>cheap</em>.</li>
+</ul>
+</li>
+<li>What are the cheapest operations I can do?
+<ul>
+<li>Arithmetic operations.</li>
+</ul>
+</li>
+<li>What about multiplication?
+<ul>
+<li>Like a hash?</li>
+</ul>
+</li>
+</ul>
+<p>Yeah, by comparing the needle hash with the window hash, I can (hopefully) skip most comparisons.</p>
+<p><em>But</em> I'm constrained by <strong>linear time complexity</strong>, with this in mind, how do I calculate the hash for each window?</p>
+<p>I know how to do this in <code>O(N²)</code>, but not in <code>O(N)</code>.</p>
+<p>Ok, gotta try something else (but I'll come back to hashing later).</p>
+<ul>
+<li>Brain, give me another cheap arithmetic operation.
+<ul>
+<li>XOR.</li>
+</ul>
+</li>
+<li>Mmmmmmmmmmmm... nope.
+<ul>
+<li>Addition?</li>
+</ul>
+</li>
+</ul>
+<p>Yes! Similar to the hash idea, we can compute the sum (of all elements) for both slices, if <code>sum(needle) != sum(haystack)</code>, equality is impossible and the check can be skipped.</p>
+<p>And this time, I know how to do this in <code>O(N)</code>, take these windows as an example:</p>
+<table><thead><tr><th align="center"></th><th align="center">0</th><th align="center">1</th><th align="center">2</th><th align="center">3</th><th align="center">4</th><th align="center">5</th><th align="center">6</th><th align="center">7</th><th align="center">8</th><th align="center">9</th></tr></thead><tbody>
+<tr><td align="center">1st</td><td align="center">0</td><td align="center">1</td><td align="center">2</td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td></tr>
+<tr><td align="center">2nd</td><td align="center"></td><td align="center">1</td><td align="center">2</td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center"></td><td align="center"></td><td align="center"></td></tr>
+<tr><td align="center">3rd</td><td align="center"></td><td align="center"></td><td align="center">2</td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center">7</td><td align="center"></td><td align="center"></td></tr>
+<tr><td align="center">4th</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center">3</td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center">7</td><td align="center">8</td><td align="center"></td></tr>
+<tr><td align="center">5th</td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center"></td><td align="center">4</td><td align="center">5</td><td align="center">6</td><td align="center">7</td><td align="center">8</td><td align="center">9</td></tr>
+</tbody></table>
+<p>To start, calculate the sum of the first window naively:</p>
+<ol>
+<li>First sum is <code>15</code>.</li>
+</ol>
+<p>For the rest, reuse the previous sum, subtract the removed element and add the new one:</p>
+<ol start="2">
+<li><code>Second = First + 6 - 0 = 21</code>.</li>
+<li><code>Third = Second + 7 - 1 = 27</code>.</li>
+<li><code>Fourth = Third + 8 - 2 = 33</code>.</li>
+<li><code>Fifth = Fourth + 9 - 3 = 39</code>.</li>
+<li>And so on...</li>
+</ol>
+<p>That's <code>O(N)</code> for all windows, and addition is, of course, fast as hell.</p>
+<h1 id="the-algorithm">The algorithm</h1>
+<p>Let's preprocess the sum of the needle, and calculate the sum for each window, comparing both to perform skips.</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span style="font-style:italic;color:#928374;">// Time complexity: O(H * N) // same as naive
+</span><span style="font-style:italic;color:#928374;">// Space complexity: O(1)    // same as naive
+</span><span style="color:#fa5c4b;">fn </span><span style="color:#8ec07c;">sum_search</span><span>(</span><span style="color:#fdf4c1;">haystack</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>, </span><span style="color:#fdf4c1;">needle</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>) -&gt; </span><span style="color:#fa5c4b;">bool </span><span>{
+</span><span>    </span><span style="font-style:italic;color:#928374;">// Treat corner cases
+</span><span>    </span><span style="color:#fa5c4b;">if</span><span> needle.</span><span style="color:#fabd2f;">is_empty</span><span>() {
+</span><span>        </span><span style="color:#fa5c4b;">return </span><span style="color:#d3869b;">true</span><span>;
+</span><span>    } </span><span style="color:#fa5c4b;">else if</span><span> needle.</span><span style="color:#fabd2f;">len</span><span>() </span><span style="color:#fe8019;">&gt;=</span><span> haystack.</span><span style="color:#fabd2f;">len</span><span>() {
+</span><span>        </span><span style="color:#fa5c4b;">return</span><span> haystack </span><span style="color:#fe8019;">==</span><span> needle;
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#fa5c4b;">let </span><span>[haystack, needle] </span><span style="color:#fe8019;">= </span><span>[haystack, needle].</span><span style="color:#fabd2f;">map</span><span>(</span><span style="color:#fa5c4b;">str</span><span>::as_bytes);
+</span><span>
+</span><span>    </span><span style="color:#fa5c4b;">let mut</span><span> windows </span><span style="color:#fe8019;">=</span><span> haystack.</span><span style="color:#fabd2f;">windows</span><span>(needle.</span><span style="color:#fabd2f;">len</span><span>());
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#928374;">// Unwrap Safety:
+</span><span>    </span><span style="font-style:italic;color:#928374;">//   We know that `0 &lt; needle.len() &lt; haystack.len()`, there is at
+</span><span>    </span><span style="font-style:italic;color:#928374;">//   least one window.
+</span><span>    </span><span style="color:#fa5c4b;">let</span><span> first_window </span><span style="color:#fe8019;">=</span><span> windows.</span><span style="color:#fabd2f;">next</span><span>().</span><span style="color:#fabd2f;">unwrap</span><span>();
+</span><span>
+</span><span>    </span><span style="color:#fa5c4b;">let </span><span style="color:#8ec07c;">sum_slice </span><span style="color:#fe8019;">= </span><span>|</span><span style="color:#fdf4c1;">slice</span><span>: </span><span style="color:#fe8019;">&amp;</span><span>[</span><span style="color:#fa5c4b;">u8</span><span>]| -&gt; </span><span style="color:#fa5c4b;">u64 </span><span>{
+</span><span>        slice.</span><span style="color:#fabd2f;">iter</span><span>().</span><span style="color:#fabd2f;">copied</span><span>().</span><span style="color:#fabd2f;">map</span><span>(</span><span style="color:#fa5c4b;">u64</span><span>::from).</span><span style="color:#fabd2f;">sum</span><span>()
+</span><span>    };
+</span><span>
+</span><span>    </span><span style="color:#fa5c4b;">let</span><span> needle_sum </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">sum_slice</span><span>(needle);
+</span><span>    </span><span style="color:#fa5c4b;">let mut</span><span> window_sum </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">sum_slice</span><span>(first_window);
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#928374;">// Short-circuit the expensive check to skip it
+</span><span>    </span><span style="color:#fa5c4b;">if</span><span> needle_sum </span><span style="color:#fe8019;">==</span><span> window_sum </span><span style="color:#fe8019;">&amp;&amp;</span><span> first_window </span><span style="color:#fe8019;">==</span><span> needle {
+</span><span>        </span><span style="color:#fa5c4b;">return </span><span style="color:#d3869b;">true</span><span>;
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="font-style:italic;color:#928374;">// Now, for the rest of the windows.
+</span><span>    </span><span style="color:#fa5c4b;">for </span><span>(removed_element_index, window) </span><span style="color:#fe8019;">in</span><span> windows.</span><span style="color:#fabd2f;">enumerate</span><span>() {
+</span><span>        </span><span style="font-style:italic;color:#928374;">// Unwrap Safety:
+</span><span>        </span><span style="font-style:italic;color:#928374;">//   We know that `needle.len() &gt; 0`, every window is non-empty.
+</span><span>        window_sum </span><span style="color:#fe8019;">+= *</span><span>window.</span><span style="color:#fabd2f;">last</span><span>().</span><span style="color:#fabd2f;">unwrap</span><span>() </span><span style="color:#fe8019;">as </span><span style="color:#fa5c4b;">u64</span><span>;
+</span><span>        window_sum </span><span style="color:#fe8019;">-=</span><span> haystack[removed_element_index] </span><span style="color:#fe8019;">as </span><span style="color:#fa5c4b;">u64</span><span>;
+</span><span>
+</span><span>        </span><span style="font-style:italic;color:#928374;">// If the sum doesn&#39;t match, skip the check
+</span><span>        </span><span style="color:#fa5c4b;">if</span><span> needle_sum </span><span style="color:#fe8019;">!=</span><span> window_sum {
+</span><span>            </span><span style="color:#fa5c4b;">continue</span><span>;
+</span><span>        }
+</span><span>        </span><span style="font-style:italic;color:#928374;">// Check equality (expensive check)
+</span><span>        </span><span style="color:#fa5c4b;">if</span><span> window </span><span style="color:#fe8019;">==</span><span> needle {
+</span><span>            </span><span style="color:#fa5c4b;">return </span><span style="color:#d3869b;">true</span><span>;
+</span><span>        }
+</span><span>    }
+</span><span>
+</span><span>    </span><span style="color:#d3869b;">false
+</span><span>}
+</span></code></pre>
+<p>Time to compare it to the naive solution and (one of) the fastest <a href="https://en.wikipedia.org/wiki/Boyer-Moore_string-search_algorithm">Boyer–Moore</a> crate, <a href="https://crates.io/crates/needle"><code>needle</code></a>:</p>
+<p>(Benchmarked searching for <code>&quot;Lorem is a ipsum and more&quot;</code> in a <a href="https://ocw.mit.edu/ans7870/6/6.006/s08/lecturenotes/files/t8.shakespeare.txt">Shakespeare book</a>.)</p>
+<pre data-lang="Python" style="background-color:#282828;color:#fdf4c1aa;" class="language-Python "><code class="language-Python" data-lang="Python"><span>boyer_moore  </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">1.52 </span><span>ms
+</span><span>sum_search   </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">2.43 </span><span>ms </span><span style="font-style:italic;color:#928374;"># mine
+</span><span>naive_search </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">13.87 </span><span>ms
+</span></code></pre>
+<blockquote>
+<p>Mistake: When writing I didn't consider <a href="https://docs.rs/memchr/latest/memchr/memmem/index.html"><code>memchr::memmem</code></a>, which may contain a faster <a href="https://en.wikipedia.org/wiki/Boyer-Moore_string-search_algorithm">Boyer–Moore</a> implementation than <a href="https://crates.io/crates/needle"><code>needle</code></a>. Sorry <strong>Burnt Sushi</strong>!</p>
+</blockquote>
+<p>Cool! It's slower than <a href="https://en.wikipedia.org/wiki/Boyer-Moore_string-search_algorithm">Boyer–Moore</a> but faster than the naive algorithm, and it's very simple.</p>
+<p>This is curious, there is no <code>&quot;Lorem&quot;</code> substring in the text, but there's a lot of <code>&quot;L&quot;</code>, <code>&quot;Lo&quot;</code> and <code>&quot;Lor&quot;</code>, that's probably why <code>naive_search</code> is much slower.</p>
+<p>Time to see if we're faster than the <code>std</code>'s solution:</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span style="color:#fa5c4b;">fn </span><span style="color:#8ec07c;">std_search</span><span>(</span><span style="color:#fdf4c1;">haystack</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>, </span><span style="color:#fdf4c1;">needle</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>) -&gt; </span><span style="color:#fa5c4b;">bool </span><span>{
+</span><span>    haystack.</span><span style="color:#fabd2f;">contains</span><span>(needle)
+</span><span>}
+</span></code></pre>
+<pre data-lang="Python" style="background-color:#282828;color:#fdf4c1aa;" class="language-Python "><code class="language-Python" data-lang="Python"><span>naive_search </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">13.87 </span><span>ms
+</span><span>sum_search   </span><span style="color:#fe8019;">=   </span><span style="color:#d3869b;">2.43 </span><span>ms
+</span><span>boyer_moore  </span><span style="color:#fe8019;">=   </span><span style="color:#d3869b;">1.52 </span><span>ms
+</span><span>std_search   </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">127.84 </span><span>µs </span><span style="font-style:italic;color:#928374;"># ...
+</span></code></pre>
+
+  
+  
+    
+    
+  
+  <img src="https://marcos.unsafe.rs/images/tom.jpg" alt="Image of Tom (the cat from Tom &amp; Jerry) with a judgemental look in his eyes."  class="center" style="height: 80vh; object-fit: cover; border-radius: 20px;" />
+
+
+
+<p>Oh, the needle is so small that the <code>std</code> <a href="https://github.com/rust-lang/rust/blob/725afd287a27891eec607d6859bce2a551114181/library/core/src/str/pattern.rs#L963-L968">optimizes it</a> to <a href="https://github.com/rust-lang/rust/blob/725afd287a27891eec607d6859bce2a551114181/library/core/src/str/pattern.rs#L1732">use SIMD</a> instructions instead.</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span>#[</span><span style="color:#fdf4c1;">cfg</span><span>(</span><span style="color:#fdf4c1;">all(target_arch </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;x86_64&quot;</span><span style="color:#fdf4c1;">, target_feature </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;sse2&quot;</span><span style="color:#fdf4c1;">)</span><span>)]
+</span><span style="color:#fa5c4b;">if </span><span style="color:#fdf4c1;">self</span><span>.</span><span style="color:#fabd2f;">len</span><span>() </span><span style="color:#fe8019;">&lt;= </span><span style="color:#d3869b;">32 </span><span>{
+</span><span>    </span><span style="color:#fa5c4b;">if let </span><span style="color:#fabd2f;">Some</span><span>(result) </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">simd_contains</span><span>(</span><span style="color:#fdf4c1;">self</span><span>, haystack) {
+</span><span>        </span><span style="color:#fa5c4b;">return</span><span> result;
+</span><span>    }
+</span><span>}
+</span><span style="font-style:italic;color:#928374;">// PR - https://github.com/rust-lang/rust/pull/103779
+</span></code></pre>
+<p>I'll avoid that by expanding the needle to:</p>
+<p><code>&quot;Lorem is a ipsum and more, consectetur&quot;</code> (38 bytes)</p>
+<pre data-lang="Python" style="background-color:#282828;color:#fdf4c1aa;" class="language-Python "><code class="language-Python" data-lang="Python"><span>naive_search </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">14.22 </span><span>ms
+</span><span>sum_search   </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">2.39 </span><span>ms
+</span><span>std_search   </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">1.27 </span><span>ms </span><span style="font-style:italic;color:#928374;"># still very good
+</span><span>boyer_moore  </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">1.01 </span><span>ms
+</span></code></pre>
+<h1 id="the-karp-and-the-rabin">The Karp, and the Rabin</h1>
+<p>After writing my algorithm down, I started researching <a href="https://en.wikipedia.org/wiki/String-searching_algorithm#Classification_of_search_algorithms">existing solutions</a>. Do you remember the hash idea? And how I couldn't compute all hashes in <code>O(N)</code>?</p>
+<p>Well, it actually has a name, that's the <a href="https://en.wikipedia.org/wiki/Rabin%E2%80%93Karp_algorithm"><code>Rabin-Karp</code> algorithm</a>, it skips checks by using a hash, actually, a <em>rolling hash</em>.</p>
+<p>A <em>rolling hash</em> is exactly what I was looking for, with it, you're able to calculate the next window hash based on the previous one, by just peeking at the new (and, sometimes the deleted) elements.</p>
+<p>But wait, that's extremely similar to what I did, isn't my sum thing a <em>rolling hash</em>?</p>
+<p>Here's the <a href="https://doc.rust-lang.org/nightly/std/hash/trait.Hash.html#hash-and-eq">main property</a> of a hash:</p>
+<pre data-lang="py" style="background-color:#282828;color:#fdf4c1aa;" class="language-py "><code class="language-py" data-lang="py"><span>a </span><span style="color:#fe8019;">== </span><span>b </span><span style="color:#fe8019;">-&gt; </span><span style="color:#fabd2f;">hash</span><span style="color:#fdf4c1;">(a) </span><span style="color:#fe8019;">== </span><span style="color:#fabd2f;">hash</span><span style="color:#fdf4c1;">(b)
+</span></code></pre>
+<p>And to be clear, we were relying on the <a href="https://en.wikipedia.org/wiki/Material_conditional#Formal_properties">contraposition</a> of it to perform the skips:</p>
+<pre data-lang="py" style="background-color:#282828;color:#fdf4c1aa;" class="language-py "><code class="language-py" data-lang="py"><span style="color:#fabd2f;">hash</span><span style="color:#fdf4c1;">(a) </span><span style="color:#fe8019;">!= </span><span style="color:#fabd2f;">hash</span><span style="color:#fdf4c1;">(b) </span><span style="color:#fe8019;">-&gt; </span><span>a </span><span style="color:#fe8019;">!= </span><span>b   </span><span style="font-style:italic;color:#928374;"># This has the same meaning as the above
+</span></code></pre>
+<p>Yes, the sequence sum meets this property, so it does look like a rolling hash, but it doesn't comply to the other properties that we usually expect from a hash function (like uniformity, necessary for good bucket distribution).</p>
+<p>To settle my doubt, here is <a href="https://shorturl.at/jwFGT">a quote from the <code>Rabin-Karp</code> Wikipedia article</a>:</p>
+<blockquote>
+<p>“A trivial (but not very good) rolling hash function just adds the values of each character in the substring.”</p>
+</blockquote>
+<h1 id="closing-thoughts">Closing thoughts</h1>
+<p>To me, it has become clear that, from the problem statement, you can arrive very close to the <a href="https://en.wikipedia.org/wiki/Rabin%E2%80%93Karp_algorithm"><code>Rabin-Karp</code> algorithm</a>, well, at the trivial part of it.</p>
+<p>I found two crates that use <code>Rabin-Karp</code>:</p>
+<ol>
+<li><a href="https://github.com/BurntSushi/memchr/blob/ce7b8e606410f6c81a63f45abb24c5b5aab5d741/src/arch/all/rabinkarp.rs#L19-L54">memchr</a>.</li>
+<li><a href="https://github.com/BurntSushi/aho-corasick/blob/3852632f10587db0ff72ef29e88d58bf305a0946/src/packed/rabinkarp.rs#L177-L184">aho-corasick</a>.</li>
+</ol>
+<p>(Props to <a href="https://github.com/burntSushi"><code>@BurntSushi</code></a> for lovely writing the linked comprehensive comments.)</p>
+<p>If you're using <code>axum</code>, <code>futures</code> or the <code>regex</code> crate, then your code is probably using <code>Rabin-Karp</code>, because they depend on <code>1</code> or <code>2</code>.</p>
+<p>The hard part of <code>Rabin-Karp</code> is coming up with a decent <em>rolling hash function</em>, the two links above point to <a href="http://www-igm.univ-mlv.fr/%7Elecroq/string/node5.html">an implementation reference</a>.</p>
+<hr />
+<p>It's also clear that I ran away from the deep problem when I gave up on the hashing problem, the ideal thing would be to explore on it until I've come up with a good hashing solution.</p>
+<p>But what can I expect? That algorithm was all just a shower thought.</p>
+<h1 id="homework">Homework</h1>
+<p>If I managed to spark your interest on this subject, you should read more about it!</p>
+<p>So, here are some suggested points for you to think about:</p>
+<ol>
+<li>Check <a href="https://en.wikipedia.org/wiki/String-searching_algorithm#Classification_of_search_algorithms">the classification of (substring) search algorithms</a>.</li>
+<li>Why is <code>std</code>'s <a href="https://doc.rust-lang.org/nightly/std/primitive.str.html#method.contains"><code>&lt;&amp;str&gt;::contains</code></a> <a href="https://github.com/rust-lang/rust/blob/4af886f8ab94543caad689ee6bf6a93fa8bd4a98/library/core/src/str/pattern.rs#L1253-L1325">implementation</a> so fast?</li>
+<li>What makes for a good <em>rolling hash function</em>?
+<ul>
+<li>Check <a href="http://www-igm.univ-mlv.fr/%7Elecroq/string/node5.html">the one</a> used in <code>memchr</code> and <code>aho-corasick</code> crates.</li>
+</ul>
+</li>
+<li>For what inputs each substring search algorithm shines the most?
+<ul>
+<li>Is it possible to create an adaptative algorithm that collects insights from the input on-the-fly and changes strategy based on it? Is there any gain on falling back to another strategy mid-way, or can you always take the correct decision upfront?</li>
+</ul>
+</li>
+</ol>
+<h1 id="extras">Extras</h1>
+<h2 id="can-the-algorithm-overflow">Can the algorithm overflow?</h2>
+<p>It would require a needle of <code>72_057 TB</code>, in that case, the search algorithm would produce false-negatives.</p>
+<h2 id="xor-variation">XOR variation</h2>
+<p>At first, I thought <code>XOR</code> wasn't a solution, so I focused on addition.</p>
+<p>However, to quickly recalculate the sum for the new window, we were relying on the invertibility property of addition, that is:</p>
+<pre style="background-color:#282828;color:#fdf4c1aa;"><code><span>A + B - B == A
+</span></code></pre>
+<p>Guess what:</p>
+<pre style="background-color:#282828;color:#fdf4c1aa;"><code><span>A ^ B ^ B == A
+</span></code></pre>
+<p>It also applies to XOR, let's see what happens:</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span style="color:#fa5c4b;">fn </span><span style="color:#8ec07c;">xor_search</span><span>(</span><span style="color:#fdf4c1;">haystack</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>, </span><span style="color:#fdf4c1;">needle</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>) -&gt; </span><span style="color:#fa5c4b;">bool </span><span>{
+</span><span>    </span><span style="color:#fe8019;">...
+</span><span>
+</span><span>    </span><span style="color:#fa5c4b;">let </span><span style="color:#8ec07c;">xor_slice </span><span style="color:#fe8019;">= </span><span>|</span><span style="color:#fdf4c1;">slice</span><span>: </span><span style="color:#fe8019;">&amp;</span><span>[</span><span style="color:#fa5c4b;">u8</span><span>]| -&gt; </span><span style="color:#fa5c4b;">u64 </span><span>{
+</span><span>        slice.</span><span style="color:#fabd2f;">iter</span><span>().</span><span style="color:#fabd2f;">copied</span><span>().</span><span style="color:#fabd2f;">map</span><span>(</span><span style="color:#fa5c4b;">u64</span><span>::from).</span><span style="color:#fabd2f;">fold</span><span>(</span><span style="color:#d3869b;">0</span><span>, |</span><span style="color:#fdf4c1;">a</span><span>, </span><span style="color:#fdf4c1;">b</span><span>| a </span><span style="color:#fe8019;">^</span><span> b)
+</span><span>    };
+</span><span>    </span><span style="color:#fa5c4b;">let</span><span> needle_xor </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">xor_slice</span><span>(needle);
+</span><span>    </span><span style="color:#fa5c4b;">let mut</span><span> window_xor </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">xor_slice</span><span>(first_window);
+</span><span>
+</span><span>    </span><span style="color:#fe8019;">...
+</span><span>
+</span><span>    </span><span style="color:#fa5c4b;">for </span><span>(removed_element_index, window) </span><span style="color:#fe8019;">in</span><span> windows.</span><span style="color:#fabd2f;">enumerate</span><span>() {
+</span><span>        </span><span style="font-style:italic;color:#928374;">// Unwrap Safety:
+</span><span>        </span><span style="font-style:italic;color:#928374;">//   We know that `needle.len() &gt; 0`, every window is non-empty.
+</span><span>        window_xor </span><span style="color:#fe8019;">^= *</span><span>window.</span><span style="color:#fabd2f;">last</span><span>().</span><span style="color:#fabd2f;">unwrap</span><span>() </span><span style="color:#fe8019;">as </span><span style="color:#fa5c4b;">u64</span><span>;
+</span><span>        window_xor </span><span style="color:#fe8019;">^=</span><span> haystack[removed_element_index] </span><span style="color:#fe8019;">as </span><span style="color:#fa5c4b;">u64</span><span>;
+</span><span>        </span><span style="color:#fe8019;">...
+</span></code></pre>
+<pre data-lang="Python" style="background-color:#282828;color:#fdf4c1aa;" class="language-Python "><code class="language-Python" data-lang="Python"><span>naive_search </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">14.22 </span><span>ms
+</span><span>xor_search   </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">2.69 </span><span>ms </span><span style="font-style:italic;color:#928374;"># here
+</span><span>sum_search   </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">2.39 </span><span>ms
+</span><span>std_search   </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">1.27 </span><span>ms
+</span><span>boyer_moore  </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">1.01 </span><span>ms
+</span></code></pre>
+<p>It works, it's still faster than the naive, but its slower than <code>sum_search</code> because XOR of <code>u8</code>s is limited to <code>u8::MAX</code> and the chance of collision is higher, in contrast to the <code>u64</code> used in <code>sum_search</code>.</p>
+<h2 id="inputs-that-trigger-the-worst-case-performance">Inputs that trigger the worst-case performance</h2>
+<p>Here's a bad case the <code>sum</code> solution, but great for <code>xor</code>:</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span>needle </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;22&quot;</span><span>;
+</span><span>haystack </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;1313131313131313...&quot;</span><span>;
+</span></code></pre>
+<p>In contrast, this one is good for <code>sum</code> and bad for <code>xor</code>:</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span>needle </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;223&quot;</span><span>;
+</span><span>haystack </span><span style="color:#fe8019;">= </span><span style="color:#b8bb26;">&quot;113113113...&quot;</span><span>;
+</span></code></pre>
+<p>In <code>&quot;223&quot;</code>, the <code>2</code>s cancel each other out, the same happens to the <code>1</code>s in <code>&quot;113&quot;</code>, the resulting XOR for both sequences is <code>b'3'</code>.</p>
+<h2 id="fun-results-for-tiny-inputs">Fun results for tiny inputs</h2>
+<p>For tiny needles (up to 24 bytes of length), this one runs faster than the naive algorithm:</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span style="color:#fa5c4b;">fn </span><span style="color:#8ec07c;">weird_search</span><span>(</span><span style="color:#fdf4c1;">haystack</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>, </span><span style="color:#fdf4c1;">needle</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>) -&gt; </span><span style="color:#fa5c4b;">bool </span><span>{
+</span><span>    </span><span style="color:#fa5c4b;">let </span><span>[haystack, needle] </span><span style="color:#fe8019;">=
+</span><span>        [haystack, needle].</span><span style="color:#fabd2f;">map</span><span>(</span><span style="color:#fa5c4b;">str</span><span>::as_bytes);
+</span><span>
+</span><span>    </span><span style="color:#fa5c4b;">let </span><span style="color:#8ec07c;">sum_slice </span><span style="color:#fe8019;">= </span><span>|</span><span style="color:#fdf4c1;">slice</span><span>: </span><span style="color:#fe8019;">&amp;</span><span>[</span><span style="color:#fa5c4b;">u8</span><span>]| -&gt; </span><span style="color:#fa5c4b;">u64 </span><span>{
+</span><span>        slice.</span><span style="color:#fabd2f;">iter</span><span>().</span><span style="color:#fabd2f;">copied</span><span>().</span><span style="color:#fabd2f;">map</span><span>(</span><span style="color:#fa5c4b;">u64</span><span>::from).</span><span style="color:#fabd2f;">sum</span><span>()
+</span><span>    };
+</span><span>    </span><span style="color:#fa5c4b;">let</span><span> needle_sum </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">sum_slice</span><span>(needle);
+</span><span>
+</span><span>    haystack.</span><span style="color:#fabd2f;">windows</span><span>(needle.</span><span style="color:#fabd2f;">len</span><span>()).</span><span style="color:#fabd2f;">any</span><span>(|</span><span style="color:#fdf4c1;">haystack_window</span><span>| {
+</span><span>        </span><span style="color:#fa5c4b;">let</span><span> window_sum </span><span style="color:#fe8019;">= </span><span style="color:#fabd2f;">sum_slice</span><span>(haystack_window);
+</span><span>        window_sum </span><span style="color:#fe8019;">==</span><span> needle_sum </span><span style="color:#fe8019;">&amp;&amp;</span><span> haystack_window </span><span style="color:#fe8019;">==</span><span> needle
+</span><span>    })
+</span><span>}
+</span></code></pre>
+<p>It's the naive, plus a sum check, here are the results:</p>
+<pre data-lang="Python" style="background-color:#282828;color:#fdf4c1aa;" class="language-Python "><code class="language-Python" data-lang="Python"><span>naive_search </span><span style="color:#fe8019;">=  </span><span style="color:#d3869b;">13.82 </span><span>ms
+</span><span>weird_search </span><span style="color:#fe8019;">=   </span><span style="color:#d3869b;">8.37 </span><span>ms </span><span style="font-style:italic;color:#928374;"># this one
+</span><span>boyer_moore  </span><span style="color:#fe8019;">=   </span><span style="color:#d3869b;">3.82 </span><span>ms
+</span><span>xor_search   </span><span style="color:#fe8019;">=   </span><span style="color:#d3869b;">2.68 </span><span>ms
+</span><span>sum_search   </span><span style="color:#fe8019;">=   </span><span style="color:#d3869b;">2.42 </span><span>ms
+</span><span>std_search   </span><span style="color:#fe8019;">= </span><span style="color:#d3869b;">137.29 </span><span>µs
+</span></code></pre>
+<p>Calculating the sum for a whole window can be faster than comparing two slices (in <code>C</code>'s <code>strcmp</code> fashion), it's probable that <code>SIMD</code> instructions are contributing to this.</p>
+<h2 id="tiny-puzzle">Tiny puzzle</h2>
+<p>What assumptions can we make about <code>haystack</code> after these checks?</p>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span style="color:#fa5c4b;">fn </span><span style="color:#8ec07c;">sum_search</span><span>(</span><span style="color:#fdf4c1;">haystack</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>, </span><span style="color:#fdf4c1;">needle</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>) -&gt; </span><span style="color:#fa5c4b;">bool </span><span>{
+</span><span>    </span><span style="font-style:italic;color:#928374;">// Treat corner cases
+</span><span>    </span><span style="color:#fa5c4b;">if</span><span> needle.</span><span style="color:#fabd2f;">is_empty</span><span>() {
+</span><span>        </span><span style="color:#fa5c4b;">return </span><span style="color:#d3869b;">true</span><span>;
+</span><span>    } </span><span style="color:#fa5c4b;">else if</span><span> needle.</span><span style="color:#fabd2f;">len</span><span>() </span><span style="color:#fe8019;">&gt;=</span><span> haystack.</span><span style="color:#fabd2f;">len</span><span>() {
+</span><span>        </span><span style="color:#fa5c4b;">return</span><span> haystack </span><span style="color:#fe8019;">==</span><span> needle;
+</span><span>    }
+</span><span>    </span><span style="color:#fe8019;">...
+</span><span>}
+</span></code></pre>
+<details>
+<summary>
+Answer. <i>(→ click me ←)</i>
+</summary>
+<blockquote>
+<p><code>haystack.len() &gt;= 2</code></p>
+</blockquote>
+</details>
+<h2 id="code-for-the-needle-crate">Code for the <code>needle</code> crate</h2>
+<pre data-lang="Rust" style="background-color:#282828;color:#fdf4c1aa;" class="language-Rust "><code class="language-Rust" data-lang="Rust"><span style="color:#fa5c4b;">fn </span><span style="color:#8ec07c;">boyer_moore</span><span>(</span><span style="color:#fdf4c1;">haystack</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>, </span><span style="color:#fdf4c1;">needle</span><span>: </span><span style="color:#fe8019;">&amp;</span><span style="color:#fa5c4b;">str</span><span>) -&gt; </span><span style="color:#fa5c4b;">bool </span><span>{
+</span><span>    ::needle::BoyerMoore::new(needle.</span><span style="color:#fabd2f;">as_bytes</span><span>())
+</span><span>        .</span><span style="color:#fabd2f;">find_first_in</span><span>(haystack.</span><span style="color:#fabd2f;">as_bytes</span><span>())
+</span><span>        .</span><span style="color:#fabd2f;">is_some</span><span>()
+</span><span>}
+</span></code></pre>
+<!--
+Talk to them before adding this
+
+## Acknowledgements
+
+Thanks to my friends, [`shyba`](https://github.com/shyba), [`matheus-consoli`](https://github.com/matheus-consoli), [`vrmiguel`](https://github.com/vrmiguel), and [`dlight`](https://github.com/dlight) for the reviews.
+-->
+<h2 id="comment-section">Comment section</h2>
+<p>I'd like the comment section to live inside of GitHub, it's an experiment:</p>
+<p>Click <a href="https://github.com/marcospb19/blog/discussions/2">here</a> for the comment section of this post.</p>
+
+        </div>
+
+        
+    </div>
+
+    </div>
+
+    
+    <footer class="footer">
+        <div class="footer__inner">
+                <div class="copyright copyright--user">Ok(())</div>
+            </div>
+    </footer>
+    
+
+</div>
+</body>
+
+</html>
